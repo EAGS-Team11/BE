@@ -1,0 +1,694 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Essay Autograding API",
+    "version": "0.1.0"
+  },
+  "paths": {
+    "/": {
+      "get": {
+        "summary": "Root",
+        "operationId": "root__get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/login": {
+      "post": {
+        "tags": [
+          "auth",
+          "auth"
+        ],
+        "summary": "Login",
+        "operationId": "login_auth_login_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UserCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/course/": {
+      "post": {
+        "tags": [
+          "course",
+          "course"
+        ],
+        "summary": "Create Course",
+        "operationId": "create_course_course__post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CourseCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CourseOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/course/join": {
+      "post": {
+        "tags": [
+          "course",
+          "course"
+        ],
+        "summary": "Join Course",
+        "operationId": "join_course_course_join_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CourseEnrollCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CourseEnrollOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/assignment/": {
+      "post": {
+        "tags": [
+          "assignment",
+          "assignment"
+        ],
+        "summary": "Create Assignment",
+        "operationId": "create_assignment_assignment__post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AssignmentCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssignmentOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/submission/": {
+      "post": {
+        "tags": [
+          "submission",
+          "submission"
+        ],
+        "summary": "Submit Assignment",
+        "operationId": "submit_assignment_submission__post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SubmissionCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SubmissionOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/predict/": {
+      "post": {
+        "tags": [
+          "predict",
+          "predict"
+        ],
+        "summary": "Predict Score",
+        "operationId": "predict_score_predict__post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/upload/text": {
+      "post": {
+        "tags": [
+          "upload",
+          "upload"
+        ],
+        "summary": "Upload Essay",
+        "operationId": "upload_essay_upload_text_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EssayUpload"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/upload/file": {
+      "post": {
+        "tags": [
+          "upload",
+          "upload"
+        ],
+        "summary": "Upload File",
+        "operationId": "upload_file_upload_file_post",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_upload_file_upload_file_post"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "AssignmentCreate": {
+        "properties": {
+          "id_course": {
+            "type": "integer",
+            "title": "Id Course"
+          },
+          "judul": {
+            "type": "string",
+            "title": "Judul"
+          },
+          "deskripsi": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Deskripsi"
+          },
+          "deadline": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Deadline"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id_course",
+          "judul"
+        ],
+        "title": "AssignmentCreate"
+      },
+      "AssignmentOut": {
+        "properties": {
+          "id_assignment": {
+            "type": "integer",
+            "title": "Id Assignment"
+          },
+          "id_course": {
+            "type": "integer",
+            "title": "Id Course"
+          },
+          "judul": {
+            "type": "string",
+            "title": "Judul"
+          },
+          "deskripsi": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Deskripsi"
+          },
+          "deadline": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Deadline"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id_assignment",
+          "id_course",
+          "judul",
+          "deskripsi",
+          "deadline"
+        ],
+        "title": "AssignmentOut"
+      },
+      "Body_upload_file_upload_file_post": {
+        "properties": {
+          "file": {
+            "type": "string",
+            "format": "binary",
+            "title": "File"
+          }
+        },
+        "type": "object",
+        "required": [
+          "file"
+        ],
+        "title": "Body_upload_file_upload_file_post"
+      },
+      "CourseCreate": {
+        "properties": {
+          "kode_course": {
+            "type": "string",
+            "title": "Kode Course"
+          },
+          "nama_course": {
+            "type": "string",
+            "title": "Nama Course"
+          },
+          "access_code": {
+            "type": "string",
+            "title": "Access Code"
+          }
+        },
+        "type": "object",
+        "required": [
+          "kode_course",
+          "nama_course",
+          "access_code"
+        ],
+        "title": "CourseCreate"
+      },
+      "CourseEnrollCreate": {
+        "properties": {
+          "id_course": {
+            "type": "integer",
+            "title": "Id Course"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id_course"
+        ],
+        "title": "CourseEnrollCreate"
+      },
+      "CourseEnrollOut": {
+        "properties": {
+          "id_enroll": {
+            "type": "integer",
+            "title": "Id Enroll"
+          },
+          "id_course": {
+            "type": "integer",
+            "title": "Id Course"
+          },
+          "id_mahasiswa": {
+            "type": "integer",
+            "title": "Id Mahasiswa"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id_enroll",
+          "id_course",
+          "id_mahasiswa"
+        ],
+        "title": "CourseEnrollOut"
+      },
+      "CourseOut": {
+        "properties": {
+          "id_course": {
+            "type": "integer",
+            "title": "Id Course"
+          },
+          "kode_course": {
+            "type": "string",
+            "title": "Kode Course"
+          },
+          "nama_course": {
+            "type": "string",
+            "title": "Nama Course"
+          },
+          "access_code": {
+            "type": "string",
+            "title": "Access Code"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id_course",
+          "kode_course",
+          "nama_course",
+          "access_code"
+        ],
+        "title": "CourseOut"
+      },
+      "EssayUpload": {
+        "properties": {
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "content": {
+            "type": "string",
+            "title": "Content"
+          }
+        },
+        "type": "object",
+        "required": [
+          "title",
+          "content"
+        ],
+        "title": "EssayUpload"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "RoleEnum": {
+        "type": "string",
+        "enum": [
+          "admin",
+          "dosen",
+          "mahasiswa"
+        ],
+        "title": "RoleEnum"
+      },
+      "SubmissionCreate": {
+        "properties": {
+          "id_assignment": {
+            "type": "integer",
+            "title": "Id Assignment"
+          },
+          "jawaban": {
+            "type": "string",
+            "title": "Jawaban"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id_assignment",
+          "jawaban"
+        ],
+        "title": "SubmissionCreate"
+      },
+      "SubmissionOut": {
+        "properties": {
+          "id_submission": {
+            "type": "integer",
+            "title": "Id Submission"
+          },
+          "id_assignment": {
+            "type": "integer",
+            "title": "Id Assignment"
+          },
+          "id_mahasiswa": {
+            "type": "integer",
+            "title": "Id Mahasiswa"
+          },
+          "jawaban": {
+            "type": "string",
+            "title": "Jawaban"
+          },
+          "submitted_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Submitted At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id_submission",
+          "id_assignment",
+          "id_mahasiswa",
+          "jawaban",
+          "submitted_at"
+        ],
+        "title": "SubmissionOut"
+      },
+      "UserCreate": {
+        "properties": {
+          "nim_nip": {
+            "type": "string",
+            "title": "Nim Nip"
+          },
+          "password": {
+            "type": "string",
+            "title": "Password"
+          },
+          "nama": {
+            "type": "string",
+            "title": "Nama"
+          },
+          "role": {
+            "$ref": "#/components/schemas/RoleEnum"
+          },
+          "prodi": {
+            "type": "string",
+            "title": "Prodi"
+          }
+        },
+        "type": "object",
+        "required": [
+          "nim_nip",
+          "password",
+          "nama",
+          "role",
+          "prodi"
+        ],
+        "title": "UserCreate"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      }
+    }
+  }
+}
