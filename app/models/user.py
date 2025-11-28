@@ -1,3 +1,4 @@
+# app/models/user.py
 from sqlalchemy import Column, Integer, String, TIMESTAMP
 from sqlalchemy.orm import relationship
 from sqlalchemy.dialects.postgresql import ENUM

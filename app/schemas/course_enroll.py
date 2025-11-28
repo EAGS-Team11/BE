@@ -1,3 +1,4 @@
+# app/schemas/course_enroll.py
 from pydantic import BaseModel
 
 class CourseEnrollCreate(BaseModel):

@@ -1,3 +1,4 @@
+# app/models/course.py
 from sqlalchemy import Column, Integer, String, ForeignKey, TIMESTAMP
 from sqlalchemy.orm import relationship
 from app.database import Base

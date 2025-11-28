@@ -1,3 +1,4 @@
+# app/models/assignments.py
 from sqlalchemy import Column, Integer, String, ForeignKey, Text, TIMESTAMP
 from sqlalchemy.orm import relationship
 from app.database import Base

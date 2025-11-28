@@ -1,3 +1,4 @@
+# app/models/system_logs.py
 from sqlalchemy import Column, Integer, String, TIMESTAMP, ForeignKey
 from sqlalchemy.orm import relationship
 from app.database import Base

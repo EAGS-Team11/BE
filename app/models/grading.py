@@ -1,3 +1,4 @@
+# app/models/grading.py
 from sqlalchemy import Column, Integer, DECIMAL, Text, ForeignKey, TIMESTAMP
 from sqlalchemy.orm import relationship
 from app.database import Base

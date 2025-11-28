@@ -1,3 +1,4 @@
+# app/schemas/course.py
 from pydantic import BaseModel
 
 class CourseCreate(BaseModel):

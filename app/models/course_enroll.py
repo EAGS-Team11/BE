@@ -1,3 +1,4 @@
+# app/models/course_enroll.py
 from sqlalchemy import Column, Integer, ForeignKey, TIMESTAMP
 from sqlalchemy.orm import relationship
 from app.database import Base
