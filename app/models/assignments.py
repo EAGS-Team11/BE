@@ -2,6 +2,7 @@
 from sqlalchemy import Column, Integer, String, ForeignKey, Text, TIMESTAMP
 from sqlalchemy.orm import relationship
 from app.database import Base
+from sqlalchemy.sql import func
 
 class Assignment(Base):
     __tablename__ = "assignments"
@@ -11,7 +12,7 @@ class Assignment(Base):
     judul = Column(String(200), nullable=False)
     deskripsi = Column(Text)
     deadline = Column(TIMESTAMP)
-    created_at = Column(TIMESTAMP, server_default="CURRENT_TIMESTAMP")
+    created_at = Column(TIMESTAMP, server_default=func.now())
 
     course = relationship("Course", back_populates="assignments")
     submissions = relationship("Submission", back_populates="assignment")

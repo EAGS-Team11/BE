@@ -2,6 +2,7 @@
 from sqlalchemy import Column, Integer, DECIMAL, Text, ForeignKey, TIMESTAMP
 from sqlalchemy.orm import relationship
 from app.database import Base
+from sqlalchemy.sql import func
 
 class Grading(Base):
     __tablename__ = "grading"
@@ -12,6 +13,6 @@ class Grading(Base):
     skor_dosen = Column(DECIMAL(5,2))
     feedback_ai = Column(Text)
     feedback_dosen = Column(Text)
-    graded_at = Column(TIMESTAMP, server_default="CURRENT_TIMESTAMP")
+    graded_at = Column(TIMESTAMP, server_default=func.now())
 
     submission = relationship("Submission", back_populates="grading")

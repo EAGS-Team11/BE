@@ -1,1 +1,4 @@
+
 docker run --name eags-postgres -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=PAKAIPASSWORDMU -e POSTGRES_DB=eags_db -p 5432:5432 -d postgres
+
+

@@ -2,6 +2,7 @@
 from sqlalchemy import Column, Integer, String, ForeignKey, TIMESTAMP
 from sqlalchemy.orm import relationship
 from app.database import Base
+from sqlalchemy.sql import func
 
 class Course(Base):
     __tablename__ = "course"
@@ -11,8 +12,8 @@ class Course(Base):
     nama_course = Column(String(100), nullable=False)
     id_dosen = Column(Integer, ForeignKey("users.id_user"), nullable=False)
     access_code = Column(String(50), nullable=False)
-    created_at = Column(TIMESTAMP, server_default="CURRENT_TIMESTAMP")
-    updated_at = Column(TIMESTAMP, server_default="CURRENT_TIMESTAMP", onupdate="CURRENT_TIMESTAMP")
+    created_at = Column(TIMESTAMP, server_default=func.now())
+    updated_at = Column(TIMESTAMP, server_default=func.now(), onupdate=func.now())
 
     dosen = relationship("User", back_populates="courses")
     assignments = relationship("Assignment", back_populates="course")
