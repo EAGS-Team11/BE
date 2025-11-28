@@ -1,22 +1,23 @@
 # app/routers/course.py
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from app.dependencies import get_db
+from app.models.user import User
 from app.models.course import Course
 from app.models.course_enroll import CourseEnroll
 from app.schemas.course import CourseCreate, CourseOut
 from app.schemas.course_enroll import CourseEnrollCreate, CourseEnrollOut
+from app.dependencies import get_db, get_current_active_user
 
 router = APIRouter(tags=["course"])
 
 @router.post("/", response_model=CourseOut)
-def create_course(course: CourseCreate, db: Session = Depends(get_db)):
-    # sementara hardcode id_dosen = 1
+def create_course(course: CourseCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_active_user)):
+
     db_course = Course(
         kode_course=course.kode_course,
         nama_course=course.nama_course,
         access_code=course.access_code,
-        id_dosen=1
+        id_dosen=current_user.id_user
     )
     db.add(db_course)
     db.commit()

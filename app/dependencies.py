@@ -1,11 +1,24 @@
 # app/dependencies.py
 
+from fastapi import Depends, HTTPException, status
+from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
-from app.database import SessionLocal, engine
-from app.models.user import User # Impor model apapun
 from sqlalchemy.engine import URL, create_engine
+from sqlalchemy import text # Wajib untuk create_database_if_not_exists
+from jose import JWTError, jwt
+from app.database import SessionLocal, engine
+from app.models.user import User
+from app.utils.auth import SECRET_KEY, ALGORITHM # Impor dari auth.py
+from pydantic import BaseModel
 import os
-from sqlalchemy import text
+
+
+# Schemas untuk token
+class TokenData(BaseModel):
+    nim_nip: str | None = None
+
+# Skema otentikasi yang digunakan di FastAPI untuk mendapatkan token dari header
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login")
 
 # Fungsi Dependency untuk FastAPI
 def get_db():
@@ -52,3 +65,31 @@ def create_database_if_not_exists():
         # Masih gagal koneksi. Fatal error.
         print(f"FATAL DATABASE ERROR: {e}")
         print("Please check if your Docker container is running or if your credentials are correct.")
+
+# Fungsi Dependency untuk memverifikasi token dan mendapatkan user
+def get_current_user(db: Session = Depends(get_db), token: str = Depends(oauth2_scheme)):
+    credentials_exception = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Could not validate credentials",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+    try:
+        # 1. Decode Payload JWT
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        nim_nip: str = payload.get("sub") # 'sub' adalah field untuk subject (nim_nip)
+        if nim_nip is None:
+            raise credentials_exception
+        token_data = TokenData(nim_nip=nim_nip)
+    except JWTError:
+        raise credentials_exception
+    
+    # 2. Ambil User dari Database
+    user = db.query(User).filter(User.nim_nip == token_data.nim_nip).first()
+    if user is None:
+        raise credentials_exception
+    return user # Mengembalikan objek User SQLAlchemy
+
+# Fungsi Dependency yang akan digunakan di router (misalnya untuk Course atau Assignment)
+def get_current_active_user(current_user: User = Depends(get_current_user)):
+    # Saat ini, semua user yang login dianggap aktif
+    return current_user
