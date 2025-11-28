@@ -1,7 +1,7 @@
 # app/routers/course.py
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from app.database import get_db
+from app.dependencies import get_db
 from app.models.course import Course
 from app.models.course_enroll import CourseEnroll
 from app.schemas.course import CourseCreate, CourseOut

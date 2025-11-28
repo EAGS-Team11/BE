@@ -1,8 +1,12 @@
 # app/main.py
+
 from fastapi import FastAPI
 from app.database import Base, engine
 from app.routers import auth, course, assignment, submission, predict, upload
+from app.dependencies import create_database_if_not_exists, get_db # <-- Impor ini
 
+# Panggil fungsi ini SEBELUM membuat tabel
+create_database_if_not_exists() 
 Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="Essay Autograding API")

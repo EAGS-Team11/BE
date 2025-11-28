@@ -1,7 +1,7 @@
 # app/routers/submission.py
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
-from app.database import get_db
+from app.dependencies import get_db
 from app.models.submissions import Submission
 from app.schemas.submission import SubmissionCreate, SubmissionOut
 
