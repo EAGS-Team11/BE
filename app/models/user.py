@@ -19,7 +19,7 @@ class User(Base):
     nama = Column(String(100), nullable=False)
     nim_nip = Column(String(50), unique=True, nullable=False)
     password = Column(String(255), nullable=False)
-    role = Column(ENUM(RoleEnum), nullable=False)
+    role = Column(ENUM(RoleEnum, name="role_enum"), nullable=False)
     prodi = Column(String(100))
     created_at = Column(TIMESTAMP, server_default=func.now())
     updated_at = Column(TIMESTAMP, server_default=func.now(), onupdate=func.now()) # Perhatikan onupdate juga diubah

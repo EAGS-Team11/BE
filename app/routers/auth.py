@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, status # Tambah status
 from sqlalchemy.orm import Session
 from app.dependencies import get_db
 from app.models.user import User
-from app.schemas.user import UserCreate, UserOut # Tambah UserOut
+from app.schemas.user import UserCreate, UserLogin, UserOut # Tambah UserOut
 from app.utils.auth import verify_password, create_access_token, hash_password # Tambah hash_password
 
 router = APIRouter(tags=["auth"])
@@ -38,7 +38,7 @@ def register_user(user: UserCreate, db: Session = Depends(get_db)):
 
 # Endpoint login (sudah ada)
 @router.post("/login")
-def login(user: UserCreate, db: Session = Depends(get_db)):
+def login(user: UserLogin, db: Session = Depends(get_db)):
     db_user = db.query(User).filter(User.nim_nip == user.nim_nip).first()
     if not db_user or not verify_password(user.password, db_user.password):
         raise HTTPException(status_code=401, detail="Invalid credentials")

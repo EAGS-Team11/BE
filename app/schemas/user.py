@@ -14,6 +14,10 @@ class UserCreate(BaseModel):
     role: RoleEnum
     prodi: str
 
+class UserLogin(BaseModel):
+    nim_nip: str
+    password: str
+
 class UserOut(BaseModel):
     id_user: int
     nim_nip: str
