@@ -4,9 +4,10 @@ from fastapi import APIRouter, Depends, HTTPException, status # Tambah status
 from sqlalchemy.orm import Session
 from app.dependencies import get_db
 from app.models.user import User
-from app.schemas.user import UserCreate, UserLogin, UserOut # Tambah UserOut
+from app.schemas.user import UserCreate, UserLogin, UserOut, UserListOut # Tambah UserListOut
 from app.utils.auth import verify_password, create_access_token, hash_password # Tambah hash_password
 from pydantic import BaseModel
+from app.dependencies import get_current_active_user, get_current_admin_user
 
 router = APIRouter(tags=["auth"])
 
@@ -59,3 +60,20 @@ def login(user: UserLogin, db: Session = Depends(get_db)):
         "token_type": "bearer",
         "user": db_user # SQLAlchemy model akan otomatis diubah ke UserOut
     }
+
+
+@router.get("/me", response_model=UserOut)
+def read_current_user(current_user: User = Depends(get_current_active_user)):
+    """Return currently authenticated user (requires Bearer token)."""
+    return current_user
+
+
+@router.get("/users", response_model=list[UserListOut])
+def list_all_users(admin_user: User = Depends(get_current_admin_user), db: Session = Depends(get_db)):
+    """
+    Admin endpoint: list semua user dalam sistem.
+    Hanya admin yang dapat mengakses endpoint ini.
+    Response tidak termasuk plain password (hanya data publik).
+    """
+    users = db.query(User).all()
+    return users

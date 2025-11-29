@@ -1,7 +1,7 @@
 # app/dependencies.py
 
 from fastapi import Depends, HTTPException, status
-from fastapi.security import OAuth2PasswordBearer
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
 from sqlalchemy.engine import URL, create_engine
 from sqlalchemy import text # Wajib untuk create_database_if_not_exists
@@ -17,8 +17,10 @@ import os
 class TokenData(BaseModel):
     nim_nip: str | None = None
 
-# Skema otentikasi yang digunakan di FastAPI untuk mendapatkan token dari header
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login")
+# Skema otentikasi HTTP Bearer (menyederhanakan OpenAPI sehingga Swagger tidak menampilkan
+# form OAuth2 yang meminta client_id/client_secret)
+# Gunakan scheme_name="bearerAuth" agar cocok dengan nama di custom_openapi() → hanya satu Authorize
+http_bearer = HTTPBearer(scheme_name="bearerAuth")
 
 # Fungsi Dependency untuk FastAPI
 def get_db():
@@ -67,15 +69,16 @@ def create_database_if_not_exists():
         print("Please check if your Docker container is running or if your credentials are correct.")
 
 # Fungsi Dependency untuk memverifikasi token dan mendapatkan user
-def get_current_user(db: Session = Depends(get_db), token: str = Depends(oauth2_scheme)):
+def get_current_user(db: Session = Depends(get_db), token: HTTPAuthorizationCredentials = Depends(http_bearer)):
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Could not validate credentials",
         headers={"WWW-Authenticate": "Bearer"},
     )
     try:
-        # 1. Decode Payload JWT
-        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+        # 1. Decode Payload JWT (ambil token dari credentials)
+        raw_token = token.credentials if hasattr(token, "credentials") else token
+        payload = jwt.decode(raw_token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
         nim_nip: str = payload.get("sub") # 'sub' adalah field untuk subject (nim_nip)
         if nim_nip is None:
             raise credentials_exception
@@ -92,4 +95,13 @@ def get_current_user(db: Session = Depends(get_db), token: str = Depends(oauth2_
 # Fungsi Dependency yang akan digunakan di router (misalnya untuk Course atau Assignment)
 def get_current_active_user(current_user: User = Depends(get_current_user)):
     # Saat ini, semua user yang login dianggap aktif
+    return current_user
+
+# Fungsi Dependency untuk memverifikasi bahwa user adalah admin
+def get_current_admin_user(current_user: User = Depends(get_current_active_user)):
+    if current_user.role != "admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only admin users can access this resource"
+        )
     return current_user

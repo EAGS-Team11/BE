@@ -27,3 +27,16 @@ class UserOut(BaseModel):
 
     class Config:
         orm_mode = True
+
+class UserListOut(BaseModel):
+    """Schema untuk admin melihat daftar semua user (tanpa password)."""
+    id_user: int
+    nim_nip: str
+    nama: str
+    role: RoleEnum
+    prodi: str
+    created_at: str
+    updated_at: str
+
+    class Config:
+        orm_mode = True
