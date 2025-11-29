@@ -1,3 +1,5 @@
+# app/config.py
+
 try:
     # pydantic v2 moved BaseSettings into a separate package
     from pydantic_settings import BaseSettings
