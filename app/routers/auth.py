@@ -6,8 +6,15 @@ from app.dependencies import get_db
 from app.models.user import User
 from app.schemas.user import UserCreate, UserLogin, UserOut # Tambah UserOut
 from app.utils.auth import verify_password, create_access_token, hash_password # Tambah hash_password
+from pydantic import BaseModel
 
 router = APIRouter(tags=["auth"])
+
+# Skema Response Login Baru
+class Token(BaseModel):
+    access_token: str
+    token_type: str
+    user: UserOut # Menyertakan detail user
 
 @router.post("/register", response_model=UserOut, status_code=status.HTTP_201_CREATED)
 def register_user(user: UserCreate, db: Session = Depends(get_db)):
@@ -36,11 +43,19 @@ def register_user(user: UserCreate, db: Session = Depends(get_db)):
     db.refresh(new_user)
     return new_user
 
-# Endpoint login (sudah ada)
-@router.post("/login")
+# Endpoint login
+@router.post("/login", response_model=Token) # <-- Ganti response_model menjadi Token
 def login(user: UserLogin, db: Session = Depends(get_db)):
     db_user = db.query(User).filter(User.nim_nip == user.nim_nip).first()
     if not db_user or not verify_password(user.password, db_user.password):
-        raise HTTPException(status_code=401, detail="Invalid credentials")
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
+    
+    # Payload token hanya berisi sub (nim_nip)
     token = create_access_token({"sub": db_user.nim_nip})
-    return {"access_token": token, "token_type": "bearer"}
+    
+    # Kembalikan token dan objek user lengkap (menggunakan UserOut schema)
+    return {
+        "access_token": token, 
+        "token_type": "bearer",
+        "user": db_user # SQLAlchemy model akan otomatis diubah ke UserOut
+    }
