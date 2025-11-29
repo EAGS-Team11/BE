@@ -1,6 +1,6 @@
 # BE - Back-End (EAGS Team 11)
 
-Deskripsi singkat: Back-end untuk "Project Essay Automated Grading System (EAGS)" yang menyediakan API untuk otentikasi, manajemen course, assignments, submissions, dan grading.
+Back-end untuk "Project Essay Automated Grading System (EAGS)" yang menyediakan API untuk otentikasi, manajemen course, assignments, submissions, dan grading.
 
 **Fitur utama**
 - **Autentikasi**: registrasi dan login dengan password yang di-hash, JWT untuk otorisasi.
