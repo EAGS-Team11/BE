@@ -8,7 +8,7 @@ from sqlalchemy import text # Wajib untuk create_database_if_not_exists
 from jose import JWTError, jwt
 from app.database import SessionLocal, engine
 from app.models.user import User
-from app.utils.auth import SECRET_KEY, ALGORITHM # Impor dari auth.py
+from app.config import settings
 from pydantic import BaseModel
 import os
 
@@ -75,7 +75,7 @@ def get_current_user(db: Session = Depends(get_db), token: str = Depends(oauth2_
     )
     try:
         # 1. Decode Payload JWT
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
         nim_nip: str = payload.get("sub") # 'sub' adalah field untuk subject (nim_nip)
         if nim_nip is None:
             raise credentials_exception
