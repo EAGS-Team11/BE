@@ -34,6 +34,12 @@ def create_course(
     db.refresh(db_course)
     return db_course
 
+@router.get("/", response_model=list[CourseOut])
+def get_all_courses(db: Session = Depends(get_db)):
+    """Get all courses (public endpoint, no auth required)."""
+    courses = db.query(Course).all()
+    return courses
+
 @router.post("/join", response_model=CourseEnrollOut)
 def join_course(
     enroll: CourseEnrollCreate, 
