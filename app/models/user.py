@@ -26,3 +26,5 @@ class User(Base):
     
     courses = relationship("Course", back_populates="dosen")
     submissions = relationship("Submission", back_populates="mahasiswa")
+
+    enrollments = relationship("CourseEnroll", back_populates="mahasiswa")

@@ -1,6 +1,7 @@
 # app/schemas/user.py
 from pydantic import BaseModel
 from enum import Enum
+from datetime import datetime
 
 class RoleEnum(str, Enum):
     admin = "admin"
@@ -35,8 +36,9 @@ class UserListOut(BaseModel):
     nama: str
     role: RoleEnum
     prodi: str
-    created_at: str
-    updated_at: str
+    # --- PERBAIKAN: GANTI str menjadi datetime ---
+    created_at: datetime 
+    updated_at: datetime 
 
     class Config:
-        orm_mode = True
+        from_attributes = True # (Asumsi Anda sudah menggunakan V2)

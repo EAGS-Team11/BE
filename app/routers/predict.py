@@ -1,6 +1,7 @@
 # app/routers/predict.py
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
+from sqlalchemy import func as sql_func
 from decimal import Decimal
 from pydantic import BaseModel
 from typing import Optional
@@ -11,6 +12,7 @@ from app.models.grading import Grading
 from app.models.user import User
 from app.utils.scoring import calculate_essay_score, get_feedback_level
 from app.schemas.grading import GradingOut
+from app.schemas.predict import PredictResponse, PredictRequest, UserStatsOut # Import UserStatsOut
 
 router = APIRouter(tags=["predict"])
 
@@ -161,3 +163,47 @@ def get_grade(
         )
     
     return grading
+
+
+
+@router.get("/my_stats", response_model=UserStatsOut)
+def get_user_stats(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    if current_user.role != "mahasiswa":
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Akses ditolak.")
+
+    # 1. Total Submissions
+    total_submitted = db.query(Submission).filter(
+        Submission.id_mahasiswa == current_user.id_user
+    ).count()
+
+    # 2. Submissions yang sudah dinilai
+    # Join Submission dengan Grading
+    graded_submissions = db.query(Submission).join(Grading).filter(
+        Submission.id_mahasiswa == current_user.id_user
+    )
+    graded_count = graded_submissions.count()
+
+    # 3. Submissions yang belum dinilai
+    # Left Join Submission dengan Grading, dan cek mana yang grading.id_grade IS NULL
+    pending_submissions = db.query(Submission).outerjoin(Grading).filter(
+        Submission.id_mahasiswa == current_user.id_user,
+        Grading.id_grade.is_(None)
+    )
+    pending_count = pending_submissions.count()
+    
+    # 4. Hitung Average Score (hanya dari yang sudah dinilai)
+    avg_score_decimal = graded_submissions.with_entities(
+        sql_func.avg(Grading.skor_ai)
+    ).scalar()
+    
+    avg_score = float(avg_score_decimal) if avg_score_decimal else 0.0
+
+    return UserStatsOut(
+        total_submitted=total_submitted,
+        graded_count=graded_count,
+        pending_count=pending_count,
+        average_score=round(avg_score, 1)
+    )

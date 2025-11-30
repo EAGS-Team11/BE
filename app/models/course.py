@@ -1,9 +1,11 @@
 # app/models/course.py
+
 from sqlalchemy import Column, Integer, String, ForeignKey, TIMESTAMP
 from sqlalchemy.orm import relationship
 from app.database import Base
 from sqlalchemy.sql import func
-from app.models.course_enroll import CourseEnroll 
+# HAPUS: from app.models.course_enroll import CourseEnroll 
+from app.models.user import User # Import User
 
 class Course(Base):
     __tablename__ = "course"
@@ -19,5 +21,5 @@ class Course(Base):
     dosen = relationship("User", back_populates="courses")
     assignments = relationship("Assignment", back_populates="course")
     
-    # --- TAMBAH RELASI BALIK KE ENROLLMENTS ---
+    # Menggunakan string 'CourseEnroll' untuk menunda impor
     enrollments = relationship("CourseEnroll", back_populates="course")
