@@ -1,3 +1,5 @@
+# tests/list_courses.ps1
+
 param(
     [string]$nim_nip = "11221058",
     [string]$password = "Dp061203",

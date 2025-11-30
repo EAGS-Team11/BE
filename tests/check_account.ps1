@@ -1,3 +1,5 @@
+# tests/check_account.ps1
+
 param(
     [Parameter(Mandatory=$true)] [string]$nim_nip,
     [Parameter(Mandatory=$true)] [string]$password,

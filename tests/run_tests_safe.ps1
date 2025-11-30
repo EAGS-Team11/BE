@@ -1,3 +1,5 @@
+# tests/run_tests_safe.ps1
+
 # run_tests_safe.ps1 - safer automated endpoint tests with try/catch
 function TryCall($scriptblock){
     try{

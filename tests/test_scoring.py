@@ -1,3 +1,5 @@
+# tests/test_scoring.py
+
 #!/usr/bin/env python3
 """Test scoring algorithm"""
 

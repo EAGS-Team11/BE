@@ -1,3 +1,5 @@
+# tests/run_tests.ps1
+
 # run_tests.ps1 - automated endpoint tests for local API
 Write-Host "Starting automated endpoint tests..."
 

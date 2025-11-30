@@ -3,6 +3,7 @@ from sqlalchemy import Column, Integer, String, ForeignKey, TIMESTAMP
 from sqlalchemy.orm import relationship
 from app.database import Base
 from sqlalchemy.sql import func
+from app.models.course_enroll import CourseEnroll 
 
 class Course(Base):
     __tablename__ = "course"
@@ -17,3 +18,6 @@ class Course(Base):
 
     dosen = relationship("User", back_populates="courses")
     assignments = relationship("Assignment", back_populates="course")
+    
+    # --- TAMBAH RELASI BALIK KE ENROLLMENTS ---
+    enrollments = relationship("CourseEnroll", back_populates="course")

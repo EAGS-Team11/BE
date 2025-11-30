@@ -3,6 +3,7 @@ from sqlalchemy import Column, Integer, ForeignKey, TIMESTAMP
 from sqlalchemy.orm import relationship
 from app.database import Base
 from sqlalchemy.sql import func
+from app.models.course import Course # Import Course
 
 class CourseEnroll(Base):
     __tablename__ = "course_enroll"
@@ -12,5 +13,6 @@ class CourseEnroll(Base):
     id_mahasiswa = Column(Integer, ForeignKey("users.id_user"), nullable=False)
     enroll_at = Column(TIMESTAMP, server_default=func.now())
 
-    course = relationship("Course")
-    mahasiswa = relationship("User")
+    # Tambah relasi ke Course dengan back_populates
+    course = relationship("Course", back_populates="enrollments") 
+    mahasiswa = relationship("User") # Relasi ke user
