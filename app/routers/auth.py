@@ -101,6 +101,28 @@ def update_profile(
     db.refresh(current_user)
     return current_user
 
+@router.put("/{nim_nip_target}", response_model=UserOut)
+def update_user_by_admin(
+    nim_nip_target: str,
+    user_data: UserUpdate,
+    db: Session = Depends(get_db),
+    admin_user: User = Depends(get_current_admin_user) # Memastikan hanya Admin
+):
+    user_to_update = db.query(User).filter(User.nim_nip == nim_nip_target).first()
+    
+    if not user_to_update:
+        raise HTTPException(status_code=404, detail="User target not found")
+        
+    if user_data.nama is not None:
+        user_to_update.nama = user_data.nama
+    if user_data.prodi is not None:
+        user_to_update.prodi = user_data.prodi
+    if user_data.password is not None:
+        user_to_update.password = hash_password(user_data.password)
+        
+    db.commit()
+    db.refresh(user_to_update)
+    return user_to_update
 
 # --- ENDPOINT BARU 2: HAPUS AKUN (/auth/delete_me) ---
 # CATATAN: Karena model User tidak memiliki kolom 'is_active', kita akan
