@@ -1,10 +1,12 @@
 # app/main.py
 
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.utils import get_openapi
 from app.database import Base, engine
-from app.routers import auth, course, assignment, submission, predict, upload
-from app.dependencies import create_database_if_not_exists, get_db # <-- Impor ini
+# --- PERUBAHAN 1: Tambahkan 'grading' di sini ---
+from app.routers import auth, course, assignment, submission, predict, upload, grading 
+from app.dependencies import create_database_if_not_exists, get_db 
 
 # Panggil fungsi ini SEBELUM membuat tabel
 create_database_if_not_exists()
@@ -12,6 +14,22 @@ Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="Essay Autograding API")
 
+# ==========================================
+# SETTING CORS (Agar Frontend Bisa Masuk)
+# ==========================================
+origins = [
+    "http://localhost:5173",    # Port Frontend Default Vite
+    "http://127.0.0.1:5173",    # Alternatif IP Frontend
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,      # Izinkan alamat di atas
+    allow_credentials=True,
+    allow_methods=["*"],        # Izinkan semua method (GET, POST, PUT, DELETE)
+    allow_headers=["*"],        # Izinkan semua header (Authorization, Content-Type)
+)
+# ==========================================
 
 # Tambahkan security scheme Bearer pada OpenAPI agar Swagger Authorize menerima token paste
 def custom_openapi():
@@ -53,3 +71,6 @@ app.include_router(assignment.router, prefix="/assignment", tags=["assignment"])
 app.include_router(submission.router, prefix="/submission", tags=["submission"])
 app.include_router(predict.router, prefix="/predict", tags=["predict"])
 app.include_router(upload.router, prefix="/upload", tags=["upload"])
+
+# --- PERUBAHAN 2: Daftarkan Router Grading ---
+app.include_router(grading.router, prefix="/grading", tags=["grading"])
