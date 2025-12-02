@@ -2,6 +2,7 @@
 from pydantic import BaseModel
 from enum import Enum
 from datetime import datetime
+from typing import Optional
 
 class RoleEnum(str, Enum):
     admin = "admin"
@@ -42,3 +43,17 @@ class UserListOut(BaseModel):
 
     class Config:
         from_attributes = True # (Asumsi Anda sudah menggunakan V2)
+
+# --- PERUBAHAN BARU 1: Schema untuk Update/Edit Profil ---
+class UserUpdate(BaseModel):
+    # NIM/NIP, Role, dan ID tidak boleh diubah melalui endpoint ini
+    nama: Optional[str] = None
+    password: Optional[str] = None
+    prodi: Optional[str] = None
+    
+    class Config:
+        from_attributes = True
+
+# --- PERUBAHAN BARU 2: Schema untuk Response Deaktivasi ---
+class StatusMessage(BaseModel):
+    message: str

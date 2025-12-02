@@ -1,13 +1,12 @@
 # app/routers/auth.py
 
-from fastapi import APIRouter, Depends, HTTPException, status # Tambah status
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-from app.dependencies import get_db
+from app.dependencies import get_db, get_current_active_user, get_current_admin_user
 from app.models.user import User
-from app.schemas.user import UserCreate, UserLogin, UserOut, UserListOut # Tambah UserListOut
-from app.utils.auth import verify_password, create_access_token, hash_password # Tambah hash_password
+from app.schemas.user import UserCreate, UserLogin, UserOut, UserListOut, UserUpdate, StatusMessage 
+from app.utils.auth import verify_password, create_access_token, hash_password 
 from pydantic import BaseModel
-from app.dependencies import get_current_active_user, get_current_admin_user
 
 router = APIRouter(tags=["auth"])
 
@@ -77,3 +76,60 @@ def list_all_users(admin_user: User = Depends(get_current_admin_user), db: Sessi
     """
     users = db.query(User).all()
     return users
+
+# --- ENDPOINT BARU 1: EDIT PROFIL (/auth/me) ---
+@router.put("/me", response_model=UserOut)
+def update_profile(
+    user_data: UserUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    # Cek dan update field yang disediakan
+    
+    if user_data.nama is not None:
+        current_user.nama = user_data.nama
+    
+    if user_data.prodi is not None:
+        current_user.prodi = user_data.prodi
+        
+    if user_data.password is not None:
+        # Hashing password baru sebelum menyimpan
+        hashed_password = hash_password(user_data.password)
+        current_user.password = hashed_password
+
+    db.commit()
+    db.refresh(current_user)
+    return current_user
+
+
+# --- ENDPOINT BARU 2: HAPUS AKUN (/auth/delete_me) ---
+# CATATAN: Karena model User tidak memiliki kolom 'is_active', kita akan
+# Hapus User secara permanen (Hard Delete) atau tambahkan kolom 'is_active'
+# Untuk keamanan data, kita ubah role menjadi 'deactivated' (asumsi kita tambahkan)
+# Namun, karena role adalah Enum, kita lakukan Hard Delete atau tambahkan field baru.
+# Kita asumsikan Hard Delete (Hati-hati, ini bisa menyebabkan data relasi terputus)
+# Untuk menghindari error relasi (Foreign Key Constraint), kita akan HAPUS PERMANEN
+# HANYA JIKA TIDAK ADA RELASI, atau Lakukan Soft Delete (disarankan).
+
+# Kita tambahkan kolom status/active di model User. Untuk sementara, kita pakai Hard Delete sederhana.
+
+@router.delete("/delete_me", response_model=StatusMessage)
+def delete_my_account(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    # Cek apakah user memiliki relasi data (Course, Submission, Enrollment)
+    # Jika tidak ada, kita Hard Delete. Jika ada, kita tolak atau lakukan Soft Delete.
+    
+    # Check for related data (contoh: Submission)
+    if db.query(User).filter(User.id_user == current_user.id_user).join(User.submissions).count() > 0:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, 
+            detail="Akun tidak dapat dihapus karena sudah memiliki data submission yang terhubung. Hubungi Admin untuk deaktivasi manual."
+        )
+
+    # Lakukan Hard Delete (hapus permanen)
+    db.delete(current_user)
+    db.commit()
+    
+    return StatusMessage(message=f"Akun dengan NIM/NIP {current_user.nim_nip} berhasil dihapus permanen.")

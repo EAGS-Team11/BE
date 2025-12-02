@@ -93,3 +93,110 @@ def get_my_courses(
     # Ekstrak objek Course dari Enrollment
     courses = [enroll.course for enroll in enrollments]
     return courses
+
+# --- ENDPOINT BARU 3: EDIT COURSE (PUT) ---
+@router.put("/{course_id}", response_model=CourseOut)
+def update_course(
+    course_id: int,
+    course_update: CourseCreate, # Reuse CourseCreate schema for update
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    # 1. Verifikasi Role
+    if current_user.role not in ["dosen", "admin"]:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Hanya dosen atau admin yang dapat mengubah course."
+        )
+
+    # 2. Cari Course
+    course = db.query(Course).filter(Course.id_course == course_id).first()
+    if not course:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Course tidak ditemukan."
+        )
+
+    # 3. Verifikasi Kepemilikan (Kecuali Admin)
+    if course.id_dosen != current_user.id_user and current_user.role != "admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Anda tidak memiliki hak untuk mengubah course ini."
+        )
+
+    # 4. Update Data
+    course.kode_course = course_update.kode_course
+    course.nama_course = course_update.nama_course
+    course.access_code = course_update.access_code
+    
+    db.commit()
+    db.refresh(course)
+    return course
+
+# --- ENDPOINT BARU 4: DELETE COURSE (DELETE) ---
+@router.delete("/{course_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_course(
+    course_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    # 1. Verifikasi Role
+    if current_user.role not in ["dosen", "admin"]:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Hanya dosen atau admin yang dapat menghapus course."
+        )
+
+    # 2. Cari Course
+    course = db.query(Course).filter(Course.id_course == course_id).first()
+    if not course:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Course tidak ditemukan."
+        )
+
+    # 3. Verifikasi Kepemilikan (Kecuali Admin)
+    if course.id_dosen != current_user.id_user and current_user.role != "admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Anda tidak memiliki hak untuk menghapus course ini."
+        )
+
+    # 4. Lakukan Pengecekan Integritas Data (Foreign Key Constraint)
+    # Course memiliki relasi dengan Assignment, Submission, dan Enrollment.
+    # Menghapus Course akan gagal jika masih ada relasi yang terhubung.
+    # Solusi: Hapus Assignment, Enrollment, dan Submission yang terkait DULU.
+    # Atau biarkan database menolak dan berikan feedback (lebih aman).
+    # Kita gunakan pendekatan aman: Hapus item relasi terkait.
+    
+    # Hapus semua Assignment terkait course ini (dan Grading/Submission terkait Assignment)
+    # Ini memerlukan penghapusan berantai: Grading -> Submission -> Assignment.
+    
+    try:
+        # Hapus Assignment, yang akan menghapus Submission dan Grading terkait (CASCADE DELETE HARUS DIAKTIFKAN DI MODEL SQLALCHEMY)
+        # Asumsi: Anda telah mengaktifkan 'cascade="all, delete-orphan"' di relationship Course->Assignments
+        
+        # JIKA CASCADE TIDAK DIAKTIFKAN, KODE INI BERISIKO GAGAL.
+        # Jika CASCADE TIDAK DIAKTIFKAN di model Course (app/models/course.py),
+        # maka kita harus menghapus Assignment secara manual:
+        
+        # from app.models.assignments import Assignment
+        # assignments_to_delete = db.query(Assignment).filter(Assignment.id_course == course_id).all()
+        # for a in assignments_to_delete:
+        #     db.delete(a)
+        
+        # Hapus Enrollment terkait course ini
+        db.query(CourseEnroll).filter(CourseEnroll.id_course == course_id).delete()
+        
+        # Hapus Course utama
+        db.delete(course)
+        db.commit()
+        
+    except Exception as e:
+        # Catch error Foreign Key (jika ada relasi yang terlewat atau CASCADE belum diset)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Gagal menghapus course. Pastikan semua assignment, submission, dan grading terkait telah dihapus. Error: {e}"
+        )
+
+    return {"message": "Course berhasil dihapus."}

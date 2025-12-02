@@ -19,7 +19,7 @@ class Course(Base):
     updated_at = Column(TIMESTAMP, server_default=func.now(), onupdate=func.now())
 
     dosen = relationship("User", back_populates="courses")
-    assignments = relationship("Assignment", back_populates="course")
-    
-    # Menggunakan string 'CourseEnroll' untuk menunda impor
-    enrollments = relationship("CourseEnroll", back_populates="course")
+    # --- PENTING: TAMBAHKAN cascade="all, delete-orphan" ---
+    assignments = relationship("Assignment", back_populates="course", cascade="all, delete-orphan")
+    enrollments = relationship("CourseEnroll", back_populates="course", cascade="all, delete-orphan")
+
