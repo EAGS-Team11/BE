@@ -1,9 +1,9 @@
-# app/schemas/grading.py
 from pydantic import BaseModel
 from typing import Optional
 from decimal import Decimal
 from datetime import datetime
 
+# Schema untuk input grading manual atau AI
 class GradingCreate(BaseModel):
     id_submission: int
     skor_ai: Optional[Decimal] = None
@@ -11,6 +11,7 @@ class GradingCreate(BaseModel):
     feedback_ai: Optional[str] = None
     feedback_dosen: Optional[str] = None
 
+# Schema untuk output grading
 class GradingOut(BaseModel):
     id_grade: int
     id_submission: int

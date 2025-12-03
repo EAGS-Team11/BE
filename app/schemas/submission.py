@@ -1,47 +1,57 @@
-# app/schemas/submission.py
-
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from datetime import datetime
 from typing import Optional
 from decimal import Decimal
-from app.schemas.user import UserOut # Import UserOut
+from app.schemas.user import UserOut
 
-# Schema untuk Assignment (Subset)
+
+# ============================================================
+#  Assignment Info (subset untuk tampil di Submission)
+# ============================================================
 class AssignmentInfo(BaseModel):
     id_assignment: int
+    id_course: int
     judul: str
+    soal: str              # <-- FIX: pakai "question" sesuai model Assignment
     deskripsi: Optional[str]
+    points: int
     deadline: Optional[datetime]
-    
-    class Config:
-        from_attributes = True
 
-# Schema untuk Grading (Subset)
+    model_config = ConfigDict(from_attributes=True)
+
+
+# ============================================================
+#  Grading Info (subset untuk tampil di Submission)
+# ============================================================
 class GradingInfo(BaseModel):
-    skor_ai: Optional[Decimal]
-    skor_dosen: Optional[Decimal]
-    feedback_ai: Optional[str]
-    graded_at: datetime
-    
-    class Config:
-        from_attributes = True
+    grade: Optional[Decimal]              # skor akhir AI
+    technical_score: Optional[Decimal]    # skor semantic similarity
+    llm_score: Optional[Decimal]          # skor reasoning LLM
+    feedback: Optional[str]               # feedback AI
+    created_at: datetime                  # pastikan model Grading pakai field ini
+
+    model_config = ConfigDict(from_attributes=True)
 
 
+# ============================================================
+#  Submission Detail Output (gabungan)
+# ============================================================
 class SubmissionDetailOut(BaseModel):
-    """Schema Gabungan untuk menampilkan Submission + Grading + Assignment"""
     id_submission: int
     jawaban: str
     submitted_at: datetime
-    
+
     # Relasi
     assignment: AssignmentInfo
-    grading: Optional[GradingInfo] = None # Grading bisa saja belum ada
-    mahasiswa: Optional[UserOut] = None # Detail mahasiswa
-    
-    class Config:
-        from_attributes = True
+    grading: Optional[GradingInfo] = None
+    mahasiswa: Optional[UserOut] = None
+
+    model_config = ConfigDict(from_attributes=True)
 
 
+# ============================================================
+#  Submission Output Simple
+# ============================================================
 class SubmissionOut(BaseModel):
     id_submission: int
     id_assignment: int
@@ -49,9 +59,12 @@ class SubmissionOut(BaseModel):
     jawaban: str
     submitted_at: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
+
+# ============================================================
+#  Submission Create (input)
+# ============================================================
 class SubmissionCreate(BaseModel):
     id_assignment: int
     jawaban: str
