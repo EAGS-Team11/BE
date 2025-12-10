@@ -1,10 +1,11 @@
 # app/models/user.py
-from sqlalchemy import Column, Integer, String, TIMESTAMP
+from sqlalchemy import Column, Integer, String, TIMESTAMP, Boolean
 from sqlalchemy.orm import relationship
 from sqlalchemy.dialects.postgresql import ENUM
 from sqlalchemy.sql import func
 from enum import Enum
 from app.database import Base
+from datetime import datetime
 
 
 class RoleEnum(str, Enum):
@@ -23,6 +24,11 @@ class User(Base):
     prodi = Column(String(100))
     created_at = Column(TIMESTAMP, server_default=func.now())
     updated_at = Column(TIMESTAMP, server_default=func.now(), onupdate=func.now()) # Perhatikan onupdate juga diubah
+    
+    # --- FITUR LUPA PASSWORD BARU ---
+    reset_token = Column(String(64), nullable=True, default=None)  # Token unik untuk reset
+    reset_expires_at = Column(TIMESTAMP, nullable=True, default=None) # Waktu kedaluwarsa token
+    # ---------------------------------
     
     courses = relationship("Course", back_populates="dosen")
     submissions = relationship("Submission", back_populates="mahasiswa")

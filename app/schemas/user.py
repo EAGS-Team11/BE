@@ -57,3 +57,12 @@ class UserUpdate(BaseModel):
 # --- PERUBAHAN BARU 2: Schema untuk Response Deaktivasi ---
 class StatusMessage(BaseModel):
     message: str
+
+class ResetRequest(BaseModel):
+    """Skema untuk meminta token reset"""
+    nim_nip: str
+
+class PasswordReset(BaseModel):
+    """Skema untuk mengatur password baru menggunakan token"""
+    token: str
+    new_password: str

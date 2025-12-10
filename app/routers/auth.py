@@ -4,9 +4,11 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from app.dependencies import get_db, get_current_active_user, get_current_admin_user
 from app.models.user import User
-from app.schemas.user import UserCreate, UserLogin, UserOut, UserListOut, UserUpdate, StatusMessage 
+from app.schemas.user import UserCreate, UserLogin, UserOut, UserListOut, UserUpdate, StatusMessage, ResetRequest, PasswordReset 
 from app.utils.auth import verify_password, create_access_token, hash_password 
 from pydantic import BaseModel
+import secrets # <-- Import secrets untuk token acak
+from datetime import datetime, timedelta # <-- Import datetime
 
 router = APIRouter(tags=["auth"])
 
@@ -155,3 +157,73 @@ def delete_my_account(
     db.commit()
     
     return StatusMessage(message=f"Akun dengan NIM/NIP {current_user.nim_nip} berhasil dihapus permanen.")
+
+
+
+@router.post("/request-reset", status_code=status.HTTP_200_OK)
+def request_password_reset(request: ResetRequest, db: Session = Depends(get_db)):
+    """
+    Membuat token reset dan menyimpannya di DB.
+    (Simulasi: token dikembalikan di response, bukan dikirim via email).
+    """
+    user = db.query(User).filter(User.nim_nip == request.nim_nip).first()
+    
+    if not user:
+        # Untuk keamanan, kita harus selalu merespons sukses
+        # meskipun user tidak ditemukan (mencegah enumerasi user).
+        return {"message": "If the NIM/NIP is registered, a password reset link has been sent."}
+
+    # 1. Buat token acak (misal 32 byte = 64 karakter hex)
+    token_reset = secrets.token_hex(32)
+    expiry_time = datetime.utcnow() + timedelta(hours=1) # Token berlaku 1 jam
+
+    # 2. Simpan token dan waktu kedaluwarsa di DB
+    user.reset_token = token_reset
+    user.reset_expires_at = expiry_time
+    db.commit()
+    
+    # 3. Kirimkan token (SIMULASI: Mengembalikan token, bukan mengirim email)
+    print(f"DEBUG: Token reset untuk {user.nim_nip}: {token_reset}")
+    
+    # Dalam produksi, response ini hanya berisi message sukses.
+    # Kita tambahkan token untuk memudahkan testing frontend:
+    return {
+        "message": "Password reset token successfully generated.",
+        "token": token_reset, # Hapus ini di produksi
+        "nim_nip": user.nim_nip
+    }
+
+
+@router.post("/reset-password", status_code=status.HTTP_200_OK)
+def reset_password(request: PasswordReset, db: Session = Depends(get_db)):
+    """
+    Mengatur password baru menggunakan token reset.
+    """
+    # 1. Cari user berdasarkan token dan pastikan token belum kedaluwarsa
+    now = datetime.utcnow()
+    user = db.query(User).filter(
+        User.reset_token == request.token,
+        User.reset_expires_at > now
+    ).first()
+
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid or expired reset token."
+        )
+
+    # 2. Validasi password baru (opsional, tapi bagus untuk keamanan)
+    if len(request.new_password) < 6:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="New password must be at least 6 characters."
+        )
+        
+    # 3. Hash password baru dan update DB
+    user.password = hash_password(request.new_password)
+    user.reset_token = None        # Hapus token setelah digunakan
+    user.reset_expires_at = None   # Hapus waktu kedaluwarsa
+    
+    db.commit()
+
+    return {"message": "Password successfully reset."}
