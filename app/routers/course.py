@@ -1,4 +1,5 @@
 # app/routers/course.py
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session, joinedload
 from app.models.user import User
@@ -19,9 +20,9 @@ def create_course(
     # Logika verifikasi role (Hanya Dosen yang bisa membuat course)
     if current_user.role != "dosen" and current_user.role != "admin":
          raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Hanya dosen atau admin yang dapat membuat course."
-        )
+             status_code=status.HTTP_403_FORBIDDEN,
+             detail="Hanya dosen atau admin yang dapat membuat course."
+         )
 
     db_course = Course(
         kode_course=course.kode_course,
@@ -46,22 +47,26 @@ def join_course(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user) # MELINDUNGI ENDPOINT
 ):
-    # Logika verifikasi role (Hanya Mahasiswa yang boleh join)
-    if current_user.role != "mahasiswa":
-         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Hanya mahasiswa yang dapat bergabung ke course."
-        )
-
+    # --- PERUBAHAN: MENGHAPUS PEMBATASAN ROLE MAHASISWA ---
+    # Logika verifikasi role LAMA:
+    # if current_user.role != "mahasiswa":
+    #      raise HTTPException(
+    #          status_code=status.HTTP_403_FORBIDDEN,
+    #          detail="Hanya mahasiswa yang dapat bergabung ke course."
+    #      )
+    # Course Enrollment tetap akan mencatat 'id_mahasiswa' (sebenarnya id_user)
+    # dari pengguna yang login (bisa Dosen, bisa Mahasiswa).
+    
     # Ganti hardcode id_mahasiswa = 2 dengan ID user dari token
     db_enroll = CourseEnroll(
         id_course=enroll.id_course,
-        id_mahasiswa=current_user.id_user # MENGGUNAKAN ID USER ASLI
+        id_mahasiswa=current_user.id_user # MENGGUNAKAN ID USER ASLI (ID Dosen atau Mahasiswa)
     )
     db.add(db_enroll)
     db.commit()
     db.refresh(db_enroll)
     return db_enroll
+# --- AKHIR PERUBAHAN ---
 
 # 1. Endpoint GET Course untuk Dosen
 @router.get("/dosen", response_model=list[CourseOut])
@@ -82,13 +87,15 @@ def get_my_courses(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
-    if current_user.role != "mahasiswa":
-         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Akses ditolak.")
+    # --- PERBAIKAN DI SINI ---
+    # Hilangkan pengecekan role yang membatasi hanya 'mahasiswa'
+    # if current_user.role != "mahasiswa":
+    #      raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Akses ditolak.")
+    # --------------------------
 
-    # Mengambil semua enrollment untuk user ini
     enrollments = db.query(CourseEnroll).filter(
-        CourseEnroll.id_mahasiswa == current_user.id_user
-    ).options(joinedload(CourseEnroll.course)).all() # Load Course secara bersamaan
+        CourseEnroll.id_mahasiswa == current_user.id_user # Menggunakan ID user yang login (Dosen/Mhs)
+    ).options(joinedload(CourseEnroll.course)).all() 
 
     # Ekstrak objek Course dari Enrollment
     courses = [enroll.course for enroll in enrollments]
@@ -163,37 +170,16 @@ def delete_course(
         )
 
     # 4. Lakukan Pengecekan Integritas Data (Foreign Key Constraint)
-    # Course memiliki relasi dengan Assignment, Submission, dan Enrollment.
-    # Menghapus Course akan gagal jika masih ada relasi yang terhubung.
-    # Solusi: Hapus Assignment, Enrollment, dan Submission yang terkait DULU.
-    # Atau biarkan database menolak dan berikan feedback (lebih aman).
-    # Kita gunakan pendekatan aman: Hapus item relasi terkait.
-    
-    # Hapus semua Assignment terkait course ini (dan Grading/Submission terkait Assignment)
-    # Ini memerlukan penghapusan berantai: Grading -> Submission -> Assignment.
-    
     try:
-        # Hapus Assignment, yang akan menghapus Submission dan Grading terkait (CASCADE DELETE HARUS DIAKTIFKAN DI MODEL SQLALCHEMY)
-        # Asumsi: Anda telah mengaktifkan 'cascade="all, delete-orphan"' di relationship Course->Assignments
-        
-        # JIKA CASCADE TIDAK DIAKTIFKAN, KODE INI BERISIKO GAGAL.
-        # Jika CASCADE TIDAK DIAKTIFKAN di model Course (app/models/course.py),
-        # maka kita harus menghapus Assignment secara manual:
-        
-        # from app.models.assignments import Assignment
-        # assignments_to_delete = db.query(Assignment).filter(Assignment.id_course == course_id).all()
-        # for a in assignments_to_delete:
-        #     db.delete(a)
-        
-        # Hapus Enrollment terkait course ini
+        # Hapus Enrollment terkait course ini (diperlukan jika CASCADE tidak aktif)
         db.query(CourseEnroll).filter(CourseEnroll.id_course == course_id).delete()
         
-        # Hapus Course utama
+        # Hapus Course utama (Asumsi CASCADE DELETE aktif di model Course -> Assignments)
         db.delete(course)
         db.commit()
         
     except Exception as e:
-        # Catch error Foreign Key (jika ada relasi yang terlewat atau CASCADE belum diset)
+        # Catch error Foreign Key
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Gagal menghapus course. Pastikan semua assignment, submission, dan grading terkait telah dihapus. Error: {e}"
