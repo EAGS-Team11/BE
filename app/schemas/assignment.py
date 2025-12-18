@@ -1,33 +1,31 @@
-from pydantic import BaseModel, field_validator
-from datetime import datetime
-from typing import List, Optional
+# app/schemas/assignment.py
 
-# --- SCHEMA SOAL (QUESTION) ---
-class QuestionBase(BaseModel):
+from pydantic import BaseModel, ConfigDict
+from typing import List, Optional
+from datetime import datetime
+
+# ==========================================
+# 1. SCHEMA SOAL (QUESTION)
+# ==========================================
+class QuestionInput(BaseModel):
+    id_question: Optional[int] = None
     nomor_soal: int
     teks_soal: str
+    bobot: int
     kunci_jawaban: Optional[str] = None
-    bobot: int = 10
 
-class QuestionCreate(QuestionBase):
-    pass
-
-class QuestionResponse(QuestionBase):
-    id_question: int
-    class Config:
-        from_attributes = True
-
-# Schema Soal untuk Mahasiswa (Tanpa Kunci Jawaban)
-class QuestionStudentOut(BaseModel):
+class QuestionOut(BaseModel):
     id_question: int
     nomor_soal: int
     teks_soal: str
     bobot: int
-    # kunci_jawaban di-hide
-    class Config:
-        from_attributes = True
+    kunci_jawaban: Optional[str] = None
 
-# --- INPUT (CREATE) ---
+    model_config = ConfigDict(from_attributes=True)
+
+# ==========================================
+# 2. SCHEMA ASSIGNMENT
+# ==========================================
 class AssignmentCreate(BaseModel):
     id_course: int
     judul: str
@@ -37,40 +35,26 @@ class AssignmentCreate(BaseModel):
     time_duration: Optional[str] = None
     questions: List[QuestionCreate] 
     deadline: Optional[datetime] = None
-    points: Optional[int] = 0 
 
-# --- OUTPUT (READ) ---
-class AssignmentStudentOut(BaseModel):
+class AssignmentWithQuestionsCreate(BaseModel):
+    id_course: int
+    judul: str
+    deskripsi: Optional[str] = None
+    deadline: Optional[datetime] = None
+    questions: List[QuestionInput]
+
+class AssignmentOut(BaseModel):
     id_assignment: int
     id_course: int
     judul: str
-    deskripsi: Optional[str]
-    start_date: Optional[datetime]
-    task_type: Optional[str]
-    time_duration: Optional[str]
-    
-    # Field questions WAJIB ada dan berupa List
-    questions: List[QuestionStudentOut] = [] 
-    
-    points: Optional[int]
-    deadline: Optional[datetime]
-    created_at: datetime
+    deskripsi: Optional[str] = None
+    deadline: Optional[datetime] = None
+    created_at: Optional[datetime] = None
 
-    class Config:
-        from_attributes = True
+    # ✅ tampilkan total points assignment
+    points: int = 0
 
-class AssignmentTeacherOut(BaseModel):
-    id_assignment: int
-    id_course: int
-    judul: str
-    deskripsi: Optional[str]
-    start_date: Optional[datetime]
-    task_type: Optional[str]
-    time_duration: Optional[str]
-    questions: List[QuestionResponse] = []
-    points: Optional[int]
-    deadline: Optional[datetime]
-    created_at: datetime
+    total_submitted: int = 0
+    questions: List[QuestionOut] = []
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)

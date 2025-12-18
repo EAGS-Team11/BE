@@ -19,7 +19,6 @@ __pycache__/
 *.pyo
 *.pyd
 
-
 # ==============================
 # IDE / editor
 # ==============================
@@ -52,5 +51,3 @@ coverage.xml
 *.cover
 *.py,cover
 *.log
-
-package-lock.json

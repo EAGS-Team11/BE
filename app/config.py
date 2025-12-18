@@ -1,40 +1,42 @@
-from pydantic_settings import BaseSettings, SettingsConfigDict
-from typing import Optional
+# app/config.py
 
-# --- Catatan: try/except untuk pydantic_settings dihapus karena sudah diinstal ---
+try:
+    from pydantic_settings import BaseSettings
+except Exception as exc:
+    raise RuntimeError(
+        "pydantic-settings is required (BaseSettings).\n"
+        "Install it with: pip install pydantic-settings"
+    ) from exc
+
 
 class Settings(BaseSettings):
     # Security/Auth Settings
     SECRET_KEY: str
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
+
+    # Database (optional helpers)
+    DATABASE_URL: str | None = None
+    DB_USER: str | None = None
+    DB_PASS: str | None = None
+    DB_HOST: str | None = None
+    DB_PORT: str | None = None
+    DB_NAME: str | None = None
+
+    # --- TAMBAHAN WAJIB (INI YANG MENYEBABKAN ERROR SEBELUMNYA) ---
+    GEMINI_API_KEY: str | None = None 
+    # -------------------------------------------------------------
     
-    # Database Settings (Wajib didefinisikan untuk dimuat dari .env)
-    DB_USER: str
-    DB_PASS: str
-    DB_HOST: str
-    DB_PORT: int
-    DB_NAME: str
+    # Cloudinary (Opsional, tambahkan jika Anda menggunakannya di .env)
+    CLOUDINARY_CLOUD_NAME: str | None = None
+    CLOUDINARY_API_KEY: str | None = None
+    CLOUDINARY_API_SECRET: str | None = None
 
-    # --- FIX: Tambahkan field OPENROUTER_API_KEY untuk AI Grader (Penting!) ---
-    OPENROUTER_API_KEY: Optional[str] = None 
+    class Config:
+        env_file = ".env"
+        # Tambahan ini penting: agar jika ada variabel lain di .env yang tidak dipakai,
+        # aplikasi TIDAK error (diabaikan saja)
+        extra = "ignore" 
 
-    # Pydantic V2 Configuration (menggantikan class Config)
-    model_config = SettingsConfigDict(
-        env_file=".env",
-        # Secara eksplisit mengabaikan variabel di .env yang tidak didefinisikan di atas, 
-        # ini mengatasi masalah 'extra_forbidden' sebelumnya.
-        extra="ignore" 
-    )
-    
-    # Helper property untuk URL koneksi SQLAlchemy
-    @property
-    def DATABASE_URL(self) -> str:
-        """
-        Membangun URL database menggunakan format PostgreSQL dengan driver psycopg2.
-        """
-        # Menggunakan format psycopg2 yang sesuai dengan FastAPI/SQLAlchemy
-        return f"postgresql+psycopg2://{self.DB_USER}:{self.DB_PASS}@{self.DB_HOST}:{self.DB_PORT}/{self.DB_NAME}"
 
-# Buat instance settings
 settings = Settings()

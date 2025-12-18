@@ -4,23 +4,12 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.utils import get_openapi
 from app.database import Base, engine
+from app.dependencies import create_database_if_not_exists
 
-# ==============================================================================
-# [PENTING] IMPORT SEMUA MODEL DI SINI
-# Agar Base.metadata.create_all mengenali tabel dan membuatnya otomatis
-# ==============================================================================
-from app.models.user import User
-from app.models.course import Course
-from app.models.assignments import Assignment
-from app.models.questions import Question
-from app.models.submissions import Submission
-from app.models.grading import Grading
-# ==============================================================================
+# Import router (Pastikan file-file ini ada di folder app/routers/)
+from app.routers import auth, course, assignment, submission, predict, upload, grading
 
-from app.routers import auth, course, assignment, submission, predict, upload, grading 
-from app.dependencies import create_database_if_not_exists, get_db 
-
-# 1. Buat Database jika belum ada
+# Buat database jika belum ada
 create_database_if_not_exists()
 
 # 2. Buat Tabel (Create Tables)
@@ -28,26 +17,28 @@ create_database_if_not_exists()
 # tabel assignments, questions, dll dengan struktur TERBARU.
 Base.metadata.create_all(bind=engine)
 
+# --- Inisialisasi App ---
 app = FastAPI(title="Essay Autograding API")
 
-# ==========================================
-# SETTING CORS
-# ==========================================
+# --- UPDATE CONFIG CORS ---
+# Saya tambahkan variasi URL untuk memastikan browser tidak memblokir
 origins = [
-    "http://localhost:5173",    # Port Frontend Default Vite
-    "http://127.0.0.1:5173",    # Alternatif IP Frontend
+    "http://localhost:5173",      # Frontend Localhost
+    "http://127.0.0.1:5173",      # Frontend IP
+    "http://localhost:3000",      # Jaga-jaga jika pakai port React default
+    "http://localhost",           # Jaga-jaga akses tanpa port
 ]
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
+    allow_origins=origins,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["*"],          # Izinkan semua method (GET, POST, PUT, DELETE, dll)
+    allow_headers=["*"],          # Izinkan semua header (Authorization, Content-Type, dll)
 )
-# ==========================================
 
-# Tambahkan security scheme Bearer pada OpenAPI
+# Custom OpenAPI (Swagger UI) untuk tombol Authorize
 def custom_openapi():
     if app.openapi_schema:
         return app.openapi_schema
@@ -57,7 +48,6 @@ def custom_openapi():
         description="API untuk Essay Autograding",
         routes=app.routes,
     )
-
     components = openapi_schema.setdefault("components", {})
     security_schemes = components.setdefault("securitySchemes", {})
     security_schemes["bearerAuth"] = {
@@ -65,12 +55,9 @@ def custom_openapi():
         "scheme": "bearer",
         "bearerFormat": "JWT",
     }
-
     openapi_schema.setdefault("security", []).append({"bearerAuth": []})
-
     app.openapi_schema = openapi_schema
     return app.openapi_schema
-
 
 app.openapi = custom_openapi
 
@@ -78,7 +65,8 @@ app.openapi = custom_openapi
 def root():
     return {"message": "FastAPI Essay Autograding API is running"}
 
-# Include routers
+# --- Include Routers ---
+# Semua router Anda tetap dipertahankan
 app.include_router(auth.router, prefix="/auth", tags=["auth"])
 app.include_router(course.router, prefix="/course", tags=["course"])
 app.include_router(assignment.router, prefix="/assignment", tags=["assignment"])

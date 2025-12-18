@@ -1,33 +1,37 @@
-# File: BE/app/schemas/grading.py
+# app/schemas/grading.py
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, field_validator
 from typing import Optional
 from decimal import Decimal
 from datetime import datetime
 
-# --- INPUT: Saat Dosen memberi nilai manual ---
-# KITA NAMAKAN 'GradingCreate' AGAR MATCH DENGAN ROUTER
+
 class GradingCreate(BaseModel):
     id_submission: int
-    skor_dosen: float
+    skor_ai: Optional[float] = None
+    skor_dosen: Optional[float] = None
+    feedback_ai: Optional[str] = None
     feedback_dosen: Optional[str] = None
 
-# --- OUTPUT: Format data keluar dari Database ---
+
 class GradingOut(BaseModel):
     id_grade: int
     id_submission: int
-    skor_ai: Optional[Decimal]
-    skor_dosen: Optional[Decimal]
-    feedback_ai: Optional[str]
-    feedback_dosen: Optional[str]
-    graded_at: Optional[datetime]
+    skor_ai: Optional[float] = None
+    skor_dosen: Optional[float] = None
+    feedback_ai: Optional[str] = None
+    feedback_dosen: Optional[str] = None
+    graded_at: Optional[datetime] = None
 
-    class Config:
-        from_attributes = True 
+    # ✅ Pydantic v2
+    model_config = ConfigDict(from_attributes=True)
 
-# --- INPUT: Untuk Auto Grading AI ---
-class AutoGradeRequest(BaseModel):
-    id_submission: int
-    soal: str
-    kunci_jawaban: str
-    max_score: float = 100.0
+    # ✅ kalau DB ngasih Decimal, convert ke float biar FE aman
+    @field_validator("skor_ai", "skor_dosen", mode="before")
+    @classmethod
+    def _decimal_to_float(cls, v):
+        if v is None:
+            return None
+        if isinstance(v, Decimal):
+            return float(v)
+        return v
