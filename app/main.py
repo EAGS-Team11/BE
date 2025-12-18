@@ -4,34 +4,36 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.utils import get_openapi
 from app.database import Base, engine
-# --- PERUBAHAN 1: Tambahkan 'grading' di sini ---
-from app.routers import auth, course, assignment, submission, predict, upload, grading 
-from app.dependencies import create_database_if_not_exists, get_db 
+from app.dependencies import create_database_if_not_exists
 
-# Panggil fungsi ini SEBELUM membuat tabel
+# Import router (Pastikan file-file ini ada di folder app/routers/)
+from app.routers import auth, course, assignment, submission, predict, upload, grading
+
+# Buat database jika belum ada
 create_database_if_not_exists()
 Base.metadata.create_all(bind=engine)
 
+# --- Inisialisasi App ---
 app = FastAPI(title="Essay Autograding API")
 
-# ==========================================
-# SETTING CORS (Agar Frontend Bisa Masuk)
-# ==========================================
+# --- UPDATE CONFIG CORS ---
+# Saya tambahkan variasi URL untuk memastikan browser tidak memblokir
 origins = [
-    "http://localhost:5173",    # Port Frontend Default Vite
-    "http://127.0.0.1:5173",    # Alternatif IP Frontend
+    "http://localhost:5173",      # Frontend Localhost
+    "http://127.0.0.1:5173",      # Frontend IP
+    "http://localhost:3000",      # Jaga-jaga jika pakai port React default
+    "http://localhost",           # Jaga-jaga akses tanpa port
 ]
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,      # Izinkan alamat di atas
+    allow_origins=origins,
     allow_credentials=True,
-    allow_methods=["*"],        # Izinkan semua method (GET, POST, PUT, DELETE)
-    allow_headers=["*"],        # Izinkan semua header (Authorization, Content-Type)
+    allow_methods=["*"],          # Izinkan semua method (GET, POST, PUT, DELETE, dll)
+    allow_headers=["*"],          # Izinkan semua header (Authorization, Content-Type, dll)
 )
-# ==========================================
 
-# Tambahkan security scheme Bearer pada OpenAPI agar Swagger Authorize menerima token paste
+# Custom OpenAPI (Swagger UI) untuk tombol Authorize
 def custom_openapi():
     if app.openapi_schema:
         return app.openapi_schema
@@ -41,8 +43,6 @@ def custom_openapi():
         description="API untuk Essay Autograding",
         routes=app.routes,
     )
-
-    # Tambah skema keamanan HTTP bearer
     components = openapi_schema.setdefault("components", {})
     security_schemes = components.setdefault("securitySchemes", {})
     security_schemes["bearerAuth"] = {
@@ -50,13 +50,9 @@ def custom_openapi():
         "scheme": "bearer",
         "bearerFormat": "JWT",
     }
-
-    # Atur skema keamanan global (opsional)
     openapi_schema.setdefault("security", []).append({"bearerAuth": []})
-
     app.openapi_schema = openapi_schema
     return app.openapi_schema
-
 
 app.openapi = custom_openapi
 
@@ -64,13 +60,12 @@ app.openapi = custom_openapi
 def root():
     return {"message": "FastAPI Essay Autograding API is running"}
 
-# Include routers
+# --- Include Routers ---
+# Semua router Anda tetap dipertahankan
 app.include_router(auth.router, prefix="/auth", tags=["auth"])
 app.include_router(course.router, prefix="/course", tags=["course"])
 app.include_router(assignment.router, prefix="/assignment", tags=["assignment"])
 app.include_router(submission.router, prefix="/submission", tags=["submission"])
 app.include_router(predict.router, prefix="/predict", tags=["predict"])
 app.include_router(upload.router, prefix="/upload", tags=["upload"])
-
-# --- PERUBAHAN 2: Daftarkan Router Grading ---
 app.include_router(grading.router, prefix="/grading", tags=["grading"])

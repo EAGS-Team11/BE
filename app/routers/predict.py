@@ -1,209 +1,282 @@
 # app/routers/predict.py
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from sqlalchemy import func as sql_func
 from decimal import Decimal
 from pydantic import BaseModel
-from typing import Optional
+from typing import Optional, List, Dict, Any
 
 from app.dependencies import get_db, get_current_active_user
 from app.models.submissions import Submission
 from app.models.grading import Grading
 from app.models.user import User
-from app.utils.scoring import calculate_essay_score, get_feedback_level
-from app.schemas.grading import GradingOut
-from app.schemas.predict import PredictResponse, PredictRequest, UserStatsOut # Import UserStatsOut
+from app.models.questions import Question
+
+# ✅ pakai grader Gemini kamu
+from app.utils.ai_grader import grader
 
 router = APIRouter(tags=["predict"])
 
 
-# ===== Schemas =====
-class PredictRequest(BaseModel):
-    """Request untuk predict score essay"""
+# =========================
+# Request schemas
+# =========================
+class PredictSingleRequest(BaseModel):
     id_submission: int
-    keywords: Optional[list[str]] = None  # Optional keyword untuk matching
-    min_words: int = 100
-    max_words: int = 5000
 
 
-class PredictResponse(BaseModel):
-    """Response dari predict endpoint"""
-    id_submission: int
-    skor_ai: float
-    feedback_ai: str
-    level: str  # Excellent, Good, Fair, Needs Improvement
+class PredictBulkRequest(BaseModel):
+    """
+    Untuk menilai 1 mahasiswa pada 1 assignment (semua soal).
+    """
+    min_answer_len: int = 5  # optional guard
 
 
-# ===== Endpoints =====
-
-@router.post("/predict", response_model=PredictResponse)
-def predict_score(
-    request: PredictRequest,
+# =========================
+# 1) PREVIEW AI grading 1 submission (per soal) - tidak simpan DB
+# =========================
+@router.post("/predict", response_model=Dict[str, Any])
+def predict_one_submission(
+    request: PredictSingleRequest,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
-    """
-    Predict score untuk submission berdasarkan essay content.
-    Hanya dosen/admin yang bisa access endpoint ini.
-    """
-    # Verifikasi role
     if current_user.role not in ["dosen", "admin"]:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Hanya dosen atau admin yang dapat melakukan prediksi skor."
-        )
-    
-    # Cari submission
-    submission = db.query(Submission).filter(
-        Submission.id_submission == request.id_submission
-    ).first()
-    
-    if not submission:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Submission dengan ID {request.id_submission} tidak ditemukan."
-        )
-    
-    # Calculate score
-    score, feedback = calculate_essay_score(
-        essay_text=submission.jawaban,
-        keywords=request.keywords,
-        min_words=request.min_words,
-        max_words=request.max_words
-    )
-    
-    level = get_feedback_level(score)
-    
-    return PredictResponse(
-        id_submission=request.id_submission,
-        skor_ai=score,
-        feedback_ai=feedback,
-        level=level
+        raise HTTPException(status_code=403, detail="Hanya dosen/admin yang dapat melakukan prediksi.")
+
+    # Ambil submission
+    sub = db.query(Submission).filter(Submission.id_submission == request.id_submission).first()
+    if not sub:
+        raise HTTPException(status_code=404, detail="Submission tidak ditemukan.")
+
+    # Ambil soal + bobot + kunci
+    q = db.query(Question).filter(Question.id_question == sub.id_question).first()
+    if not q:
+        raise HTTPException(status_code=404, detail="Question untuk submission ini tidak ditemukan.")
+
+    # Nilai pakai LLM (0..bobot)
+    result = grader.grade_essay(
+        soal=q.teks_soal,
+        kunci_jawaban=q.kunci_jawaban or "",
+        jawaban_mahasiswa=sub.jawaban or "",
+        max_score_dosen=float(q.bobot or 0)
     )
 
+    return {
+        "id_submission": sub.id_submission,
+        "id_question": sub.id_question,
+        "bobot": q.bobot,
+        "skor_ai": result["final_score"],
+        "feedback_ai": result["feedback"],
+        "method": result.get("method", "-")
+    }
 
-@router.post("/grade", response_model=GradingOut)
-def save_grade(
-    request: PredictRequest,
+
+# =========================
+# 2) SIMPAN AI grading 1 submission (upsert) ke DB
+# =========================
+@router.post("/grade", response_model=Dict[str, Any])
+def save_ai_grade_one_submission(
+    request: PredictSingleRequest,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
-    """
-    Predict score dan SIMPAN ke database sebagai Grading.
-    Hanya dosen/admin yang bisa access endpoint ini.
-    """
-    # Verifikasi role
     if current_user.role not in ["dosen", "admin"]:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Hanya dosen atau admin yang dapat menyimpan grading."
-        )
-    
-    # Cari submission
-    submission = db.query(Submission).filter(
-        Submission.id_submission == request.id_submission
-    ).first()
-    
-    if not submission:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Submission dengan ID {request.id_submission} tidak ditemukan."
-        )
-    
-    # Check if grading already exists
-    existing_grading = db.query(Grading).filter(
-        Grading.id_submission == request.id_submission
-    ).first()
-    
-    # Calculate score
-    score, feedback = calculate_essay_score(
-        essay_text=submission.jawaban,
-        keywords=request.keywords,
-        min_words=request.min_words,
-        max_words=request.max_words
+        raise HTTPException(status_code=403, detail="Hanya dosen/admin yang dapat menyimpan grading AI.")
+
+    sub = db.query(Submission).filter(Submission.id_submission == request.id_submission).first()
+    if not sub:
+        raise HTTPException(status_code=404, detail="Submission tidak ditemukan.")
+
+    q = db.query(Question).filter(Question.id_question == sub.id_question).first()
+    if not q:
+        raise HTTPException(status_code=404, detail="Question untuk submission ini tidak ditemukan.")
+
+    result = grader.grade_essay(
+        soal=q.teks_soal,
+        kunci_jawaban=q.kunci_jawaban or "",
+        jawaban_mahasiswa=sub.jawaban or "",
+        max_score_dosen=float(q.bobot or 0)
     )
-    
-    if existing_grading:
-        # Update existing grading
-        existing_grading.skor_ai = Decimal(str(score))
-        existing_grading.feedback_ai = feedback
+
+    try:
+        existing = db.query(Grading).filter(Grading.id_submission == sub.id_submission).first()
+        if existing:
+            existing.skor_ai = Decimal(str(result["final_score"]))
+            existing.feedback_ai = result["feedback"]
+        else:
+            db.add(Grading(
+                id_submission=sub.id_submission,
+                skor_ai=Decimal(str(result["final_score"])),
+                feedback_ai=result["feedback"],
+            ))
+
         db.commit()
-        db.refresh(existing_grading)
-        return existing_grading
-    else:
-        # Create new grading
-        new_grading = Grading(
-            id_submission=request.id_submission,
-            skor_ai=Decimal(str(score)),
-            feedback_ai=feedback
-        )
-        db.add(new_grading)
-        db.commit()
-        db.refresh(new_grading)
-        return new_grading
+
+        return {
+            "id_submission": sub.id_submission,
+            "id_question": sub.id_question,
+            "bobot": q.bobot,
+            "skor_ai": float(result["final_score"]),
+            "feedback_ai": result["feedback"],
+            "method": result.get("method", "-")
+        }
+
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Gagal menyimpan AI grading: {str(e)}")
 
 
-@router.get("/grade/{id_submission}", response_model=GradingOut)
-def get_grade(
-    id_submission: int,
+# =========================
+# 3) PREVIEW AI grading untuk SEMUA soal (1 assignment + 1 mahasiswa) - tidak simpan
+# =========================
+@router.post("/predict/assignment/{assignment_id}/student/{student_id}", response_model=List[Dict[str, Any]])
+def predict_bulk_assignment_student(
+    assignment_id: int,
+    student_id: int,
+    request: PredictBulkRequest,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
-    """
-    Dapatkan grading untuk submission tertentu.
-    """
-    grading = db.query(Grading).filter(
-        Grading.id_submission == id_submission
-    ).first()
-    
-    if not grading:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Grading untuk submission {id_submission} tidak ditemukan."
+    if current_user.role not in ["dosen", "admin"]:
+        raise HTTPException(status_code=403, detail="Hanya dosen/admin.")
+
+    subs = db.query(Submission).filter(
+        Submission.id_assignment == assignment_id,
+        Submission.id_mahasiswa == student_id
+    ).all()
+
+    if not subs:
+        return []
+
+    results: List[Dict[str, Any]] = []
+    for sub in subs:
+        q = db.query(Question).filter(Question.id_question == sub.id_question).first()
+        if not q:
+            continue
+
+        result = grader.grade_essay(
+            soal=q.teks_soal,
+            kunci_jawaban=q.kunci_jawaban or "",
+            jawaban_mahasiswa=sub.jawaban or "",
+            max_score_dosen=float(q.bobot or 0)
         )
-    
-    return grading
+
+        results.append({
+            "id_submission": sub.id_submission,
+            "id_question": sub.id_question,
+            "nomor_soal": q.nomor_soal,
+            "bobot": q.bobot,
+            "skor_ai": float(result["final_score"]),
+            "feedback_ai": result["feedback"],
+            "method": result.get("method", "-")
+        })
+
+    return results
 
 
+# =========================
+# 4) SIMPAN AI grading untuk SEMUA soal (1 assignment + 1 mahasiswa) - upsert
+# =========================
+@router.post("/grade/assignment/{assignment_id}/student/{student_id}", response_model=List[Dict[str, Any]])
+def save_ai_grade_bulk_assignment_student(
+    assignment_id: int,
+    student_id: int,
+    request: PredictBulkRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    if current_user.role not in ["dosen", "admin"]:
+        raise HTTPException(status_code=403, detail="Hanya dosen/admin.")
 
-@router.get("/my_stats", response_model=UserStatsOut)
+    subs = db.query(Submission).filter(
+        Submission.id_assignment == assignment_id,
+        Submission.id_mahasiswa == student_id
+    ).all()
+
+    if not subs:
+        return []
+
+    try:
+        out: List[Dict[str, Any]] = []
+
+        for sub in subs:
+            q = db.query(Question).filter(Question.id_question == sub.id_question).first()
+            if not q:
+                continue
+
+            result = grader.grade_essay(
+                soal=q.teks_soal,
+                kunci_jawaban=q.kunci_jawaban or "",
+                jawaban_mahasiswa=sub.jawaban or "",
+                max_score_dosen=float(q.bobot or 0)
+            )
+
+            existing = db.query(Grading).filter(Grading.id_submission == sub.id_submission).first()
+            if existing:
+                existing.skor_ai = Decimal(str(result["final_score"]))
+                existing.feedback_ai = result["feedback"]
+            else:
+                db.add(Grading(
+                    id_submission=sub.id_submission,
+                    skor_ai=Decimal(str(result["final_score"])),
+                    feedback_ai=result["feedback"]
+                ))
+
+            out.append({
+                "id_submission": sub.id_submission,
+                "id_question": sub.id_question,
+                "nomor_soal": q.nomor_soal,
+                "bobot": q.bobot,
+                "skor_ai": float(result["final_score"]),
+                "feedback_ai": result["feedback"],
+                "method": result.get("method", "-")
+            })
+
+        db.commit()
+        return out
+
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Gagal menyimpan AI grading bulk: {str(e)}")
+
+
+# =========================
+# 5) Statistik mahasiswa (berdasarkan skor_ai)
+# =========================
+@router.get("/my_stats")
 def get_user_stats(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
     if current_user.role != "mahasiswa":
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Akses ditolak.")
+        raise HTTPException(status_code=403, detail="Akses ditolak.")
 
-    # 1. Total Submissions
     total_submitted = db.query(Submission).filter(
         Submission.id_mahasiswa == current_user.id_user
     ).count()
 
-    # 2. Submissions yang sudah dinilai
-    # Join Submission dengan Grading
     graded_submissions = db.query(Submission).join(Grading).filter(
         Submission.id_mahasiswa == current_user.id_user
     )
     graded_count = graded_submissions.count()
 
-    # 3. Submissions yang belum dinilai
-    # Left Join Submission dengan Grading, dan cek mana yang grading.id_grade IS NULL
     pending_submissions = db.query(Submission).outerjoin(Grading).filter(
         Submission.id_mahasiswa == current_user.id_user,
         Grading.id_grade.is_(None)
     )
     pending_count = pending_submissions.count()
-    
-    # 4. Hitung Average Score (hanya dari yang sudah dinilai)
+
     avg_score_decimal = graded_submissions.with_entities(
         sql_func.avg(Grading.skor_ai)
     ).scalar()
-    
+
     avg_score = float(avg_score_decimal) if avg_score_decimal else 0.0
 
-    return UserStatsOut(
-        total_submitted=total_submitted,
-        graded_count=graded_count,
-        pending_count=pending_count,
-        average_score=round(avg_score, 1)
-    )
+    return {
+        "total_submitted": total_submitted,
+        "graded_count": graded_count,
+        "pending_count": pending_count,
+        "average_score": round(avg_score, 1)
+    }

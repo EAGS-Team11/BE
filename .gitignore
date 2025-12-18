@@ -1,6 +1,7 @@
 # ==============================
 # Virtual environment
 # ==============================
+.venv/
 venv/
 ENV/
 env/
@@ -17,7 +18,6 @@ __pycache__/
 *.pyc
 *.pyo
 *.pyd
-
 
 # ==============================
 # IDE / editor
@@ -50,4 +50,8 @@ nosetests.xml
 coverage.xml
 *.cover
 *.py,cover
-*.log
+
+# ==============================
+# Node / frontend leftovers
+# ==============================
+package-lock.json

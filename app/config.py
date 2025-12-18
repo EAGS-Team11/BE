@@ -1,9 +1,8 @@
 # app/config.py
 
 try:
-    # pydantic v2 moved BaseSettings into a separate package
     from pydantic_settings import BaseSettings
-except Exception as exc:  # pragma: no cover - clear runtime error for missing package
+except Exception as exc:
     raise RuntimeError(
         "pydantic-settings is required (BaseSettings).\n"
         "Install it with: pip install pydantic-settings"
@@ -24,8 +23,20 @@ class Settings(BaseSettings):
     DB_PORT: str | None = None
     DB_NAME: str | None = None
 
+    # --- TAMBAHAN WAJIB (INI YANG MENYEBABKAN ERROR SEBELUMNYA) ---
+    GEMINI_API_KEY: str | None = None 
+    # -------------------------------------------------------------
+    
+    # Cloudinary (Opsional, tambahkan jika Anda menggunakannya di .env)
+    CLOUDINARY_CLOUD_NAME: str | None = None
+    CLOUDINARY_API_KEY: str | None = None
+    CLOUDINARY_API_SECRET: str | None = None
+
     class Config:
         env_file = ".env"
+        # Tambahan ini penting: agar jika ada variabel lain di .env yang tidak dipakai,
+        # aplikasi TIDAK error (diabaikan saja)
+        extra = "ignore" 
 
 
 settings = Settings()
