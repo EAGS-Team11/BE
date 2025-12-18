@@ -1,70 +1,73 @@
+# File: BE/app/schemas/submission.py
+
 from pydantic import BaseModel, ConfigDict
 from datetime import datetime
-from typing import Optional
+from typing import Optional, List
 from decimal import Decimal
 from app.schemas.user import UserOut
 
+# ============================================================
+# 1. INPUT (CREATE SUBMISSION)
+# ============================================================
+class SubmissionItem(BaseModel):
+    id_question: int
+    jawaban: str
 
-# ============================================================
-#  Assignment Info (subset untuk tampil di Submission)
-# ============================================================
-class AssignmentInfo(BaseModel):
+class SubmissionCreate(BaseModel):
     id_assignment: int
-    id_course: int
-    judul: str
-    soal: str              # <-- FIX: pakai "question" sesuai model Assignment
-    deskripsi: Optional[str]
-    points: int
-    deadline: Optional[datetime]
+    items: List[SubmissionItem] 
 
-    model_config = ConfigDict(from_attributes=True)
-
+class SubmissionResponse(BaseModel):
+    message: str
+    submitted_count: int
 
 # ============================================================
-#  Grading Info (subset untuk tampil di Submission)
+# 2. OUTPUT DETAIL
 # ============================================================
+
+# --- PERBAIKAN PENTING DISINI ---
+# Ubah semua field skor/feedback menjadi Optional agar tidak error 500
 class GradingInfo(BaseModel):
-    grade: Optional[Decimal]              # skor akhir AI
-    technical_score: Optional[Decimal]    # skor semantic similarity
-    llm_score: Optional[Decimal]          # skor reasoning LLM
-    feedback: Optional[str]               # feedback AI
-    created_at: datetime                  # pastikan model Grading pakai field ini
+    id_grade: Optional[int] = None
+    
+    # Field Nilai (Optional semua)
+    grade: Optional[Decimal] = None
+    feedback: Optional[str] = None
+    technical_score: Optional[Decimal] = None
+    llm_score: Optional[Decimal] = None
+    
+    skor_dosen: Optional[Decimal] = None
+    feedback_dosen: Optional[str] = None
+    
+    created_at: Optional[datetime] = None
+    
+    model_config = ConfigDict(from_attributes=True)
+# --------------------------------
 
+class AssignmentSimple(BaseModel):
+    id_assignment: int
+    judul: str
     model_config = ConfigDict(from_attributes=True)
 
+class QuestionSimple(BaseModel):
+    id_question: int
+    nomor_soal: int
+    teks_soal: str
+    bobot: int
+    model_config = ConfigDict(from_attributes=True)
 
-# ============================================================
-#  Submission Detail Output (gabungan)
-# ============================================================
 class SubmissionDetailOut(BaseModel):
     id_submission: int
-    jawaban: str
-    submitted_at: datetime
-
-    # Relasi
-    assignment: AssignmentInfo
-    grading: Optional[GradingInfo] = None
-    mahasiswa: Optional[UserOut] = None
-
-    model_config = ConfigDict(from_attributes=True)
-
-
-# ============================================================
-#  Submission Output Simple
-# ============================================================
-class SubmissionOut(BaseModel):
-    id_submission: int
     id_assignment: int
+    id_question: int
     id_mahasiswa: int
     jawaban: str
     submitted_at: datetime
+    
+    # Relasi
+    mahasiswa: Optional[UserOut] = None
+    grading: Optional[GradingInfo] = None # Ini bisa null jika belum dinilai
+    question: Optional[QuestionSimple] = None
+    assignment: Optional[AssignmentSimple] = None
 
     model_config = ConfigDict(from_attributes=True)
-
-
-# ============================================================
-#  Submission Create (input)
-# ============================================================
-class SubmissionCreate(BaseModel):
-    id_assignment: int
-    jawaban: str

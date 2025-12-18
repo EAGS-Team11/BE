@@ -28,7 +28,7 @@ class UserOut(BaseModel):
     prodi: str
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 class UserListOut(BaseModel):
     """Schema untuk admin melihat daftar semua user (tanpa password)."""

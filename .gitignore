@@ -1,6 +1,7 @@
 # ==============================
 # Virtual environment
 # ==============================
+.venv/
 venv/
 ENV/
 env/
@@ -51,3 +52,5 @@ coverage.xml
 *.cover
 *.py,cover
 *.log
+
+package-lock.json

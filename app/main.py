@@ -4,18 +4,34 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.utils import get_openapi
 from app.database import Base, engine
-# --- PERUBAHAN 1: Tambahkan 'grading' di sini ---
+
+# ==============================================================================
+# [PENTING] IMPORT SEMUA MODEL DI SINI
+# Agar Base.metadata.create_all mengenali tabel dan membuatnya otomatis
+# ==============================================================================
+from app.models.user import User
+from app.models.course import Course
+from app.models.assignments import Assignment
+from app.models.questions import Question
+from app.models.submissions import Submission
+from app.models.grading import Grading
+# ==============================================================================
+
 from app.routers import auth, course, assignment, submission, predict, upload, grading 
 from app.dependencies import create_database_if_not_exists, get_db 
 
-# Panggil fungsi ini SEBELUM membuat tabel
+# 1. Buat Database jika belum ada
 create_database_if_not_exists()
+
+# 2. Buat Tabel (Create Tables)
+# Karena model sudah di-import di atas, perintah ini akan membuat 
+# tabel assignments, questions, dll dengan struktur TERBARU.
 Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="Essay Autograding API")
 
 # ==========================================
-# SETTING CORS (Agar Frontend Bisa Masuk)
+# SETTING CORS
 # ==========================================
 origins = [
     "http://localhost:5173",    # Port Frontend Default Vite
@@ -24,14 +40,14 @@ origins = [
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,      # Izinkan alamat di atas
+    allow_origins=origins,
     allow_credentials=True,
-    allow_methods=["*"],        # Izinkan semua method (GET, POST, PUT, DELETE)
-    allow_headers=["*"],        # Izinkan semua header (Authorization, Content-Type)
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 # ==========================================
 
-# Tambahkan security scheme Bearer pada OpenAPI agar Swagger Authorize menerima token paste
+# Tambahkan security scheme Bearer pada OpenAPI
 def custom_openapi():
     if app.openapi_schema:
         return app.openapi_schema
@@ -42,7 +58,6 @@ def custom_openapi():
         routes=app.routes,
     )
 
-    # Tambah skema keamanan HTTP bearer
     components = openapi_schema.setdefault("components", {})
     security_schemes = components.setdefault("securitySchemes", {})
     security_schemes["bearerAuth"] = {
@@ -51,7 +66,6 @@ def custom_openapi():
         "bearerFormat": "JWT",
     }
 
-    # Atur skema keamanan global (opsional)
     openapi_schema.setdefault("security", []).append({"bearerAuth": []})
 
     app.openapi_schema = openapi_schema
@@ -71,6 +85,4 @@ app.include_router(assignment.router, prefix="/assignment", tags=["assignment"])
 app.include_router(submission.router, prefix="/submission", tags=["submission"])
 app.include_router(predict.router, prefix="/predict", tags=["predict"])
 app.include_router(upload.router, prefix="/upload", tags=["upload"])
-
-# --- PERUBAHAN 2: Daftarkan Router Grading ---
 app.include_router(grading.router, prefix="/grading", tags=["grading"])
