@@ -6,22 +6,19 @@ from fastapi.openapi.utils import get_openapi
 from app.database import Base, engine
 from app.dependencies import create_database_if_not_exists
 
-# Import router (Pastikan file-file ini ada di folder app/routers/)
+# Import router
 from app.routers import auth, course, assignment, submission, predict, upload, grading
 
-# Buat database jika belum ada
+# 1. Buat database jika belum ada
 create_database_if_not_exists()
 
 # 2. Buat Tabel (Create Tables)
-# Karena model sudah di-import di atas, perintah ini akan membuat 
-# tabel assignments, questions, dll dengan struktur TERBARU.
 Base.metadata.create_all(bind=engine)
 
 # --- Inisialisasi App ---
 app = FastAPI(title="Essay Autograding API")
 
 # --- UPDATE CONFIG CORS ---
-# Saya tambahkan variasi URL untuk memastikan browser tidak memblokir
 origins = [
     "http://localhost:5173",      # Frontend Localhost
     "http://127.0.0.1:5173",      # Frontend IP
@@ -31,11 +28,10 @@ origins = [
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,
-    allow_origins=origins,
+    allow_origins=origins,        # Baris ini sudah diperbaiki (hanya satu)
     allow_credentials=True,
     allow_methods=["*"],          # Izinkan semua method (GET, POST, PUT, DELETE, dll)
-    allow_headers=["*"],          # Izinkan semua header (Authorization, Content-Type, dll)
+    allow_headers=["*"],          # Izinkan semua header
 )
 
 # Custom OpenAPI (Swagger UI) untuk tombol Authorize
@@ -66,7 +62,6 @@ def root():
     return {"message": "FastAPI Essay Autograding API is running"}
 
 # --- Include Routers ---
-# Semua router Anda tetap dipertahankan
 app.include_router(auth.router, prefix="/auth", tags=["auth"])
 app.include_router(course.router, prefix="/course", tags=["course"])
 app.include_router(assignment.router, prefix="/assignment", tags=["assignment"])
